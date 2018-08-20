@@ -7,107 +7,107 @@ vcpus=1
 ARGS=$(getopt -o s:b:c:u:v:p:ik:m: --long ssh-key:,size:,import,bus:,base-image:,config:,user-data:,vendor-data:,vcpus:,memory: -n virt-boot -- "$@")
 
 if [ $? -ne 0 ]; then
-	echo "usage: $myname --base-image <baseimage> <name>"
-	exit 2
+  echo "usage: $0 --base-image <baseimage> <name>"
+  exit 2
 fi
 
 eval set -- "$ARGS"
 
-: ${base_image:=$VIRT_BASE_IMAGE}
+: "${base_image:="$VIRT_BASE_IMAGE"}"
 
 while :; do
-	case "$1" in
-		--bus)
-			boot_vol_bus="$2"
-			shift 2
-			;;
-		-b|--base-image)
-			base_image="$2"
-			shift 2
-			;;
-		-s|--image-size)
-			base_image_size="$2"
-			shift 2
-			;;
-		-c|--config-drive)
-			config_image="$2"
-			shift 2
-			;;
-		-k|--ssh-key)
-			ssh_key="$2"
-			shift 2
-			;;
-		-u|--user-data)
-			user_data="$2"
-			shift 2
-			;;
-		-v|--vendor-data)
-			vendor_data="$2"
-			shift 2
-			;;
-		-m|--memory)
-			memory="$2"
-			shift 2
-			;;
-		-p|--vcpus)
-			vcpus="$2"
-			shift 2
-			;;
-		-i|--import)
-			no_snapshot=1
-			shift
-			;;
-		--)	shift
-			break
-			;;
-	esac
+  case "$1" in
+    --bus)
+      boot_vol_bus="$2"
+      shift 2
+      ;;
+    -b|--base-image)
+      base_image="$2"
+      shift 2
+      ;;
+    -s|--image-size)
+      base_image_size="$2"
+      shift 2
+      ;;
+    -c|--config-drive)
+      config_image="$2"
+      shift 2
+      ;;
+    -k|--ssh-key)
+      ssh_key="$2"
+      shift 2
+      ;;
+    -u|--user-data)
+      user_data="$2"
+      shift 2
+      ;;
+    -v|--vendor-data)
+      vendor_data="$2"
+      shift 2
+      ;;
+    -m|--memory)
+      memory="$2"
+      shift 2
+      ;;
+    -p|--vcpus)
+      vcpus="$2"
+      shift 2
+      ;;
+    -i|--import)
+      no_snapshot=1
+      shift
+      ;;
+    --)	shift
+      break
+      ;;
+  esac
 done
 
 dom_name=$1
 shift
 
 if [ -z "$dom_name" ]; then
-	echo "ERROR: you must specify a domain name." >&2
-	exit 1
+  echo "ERROR: you must specify a domain name." >&2
+  exit 1
 fi
 
 if [ "$ssh_key" ] && [ -f "$ssh_key" ]; then
-	ssh_key_data=$(cat "$ssh_key")
+  ssh_key_data=$(cat "$ssh_key")
 fi
 
 (
-virsh destroy $dom_name
-virsh undefine $dom_name
+virsh destroy "$dom_name"
+virsh undefine "$dom_name"
 ) > /dev/null 2>&1
 
 if [ "$no_snapshot" = 1 ]; then
-	boot_vol=$base_image
+  boot_vol="$base_image"
 else
-	boot_vol=$(virt-vol ${base_image_size:+-s $base_image_size} \
-		$base_image $dom_name.qcow2)
+  boot_vol=$(virt-vol ${base_image_size:+-s "$base_image_size"} \
+    "$base_image" "$dom_name".qcow2)
 
-	if [ $? -ne 0 ]; then
-		echo "ERROR: failed to create boot volume" >&2
-		exit 1
-	fi
+  if [ $? -ne 0 ]; then
+    echo "ERROR: failed to create boot volume" >&2
+    exit 1
+  fi
 fi
 
 if ! [ "$config_image" ]; then
-	config_image=/tmp/${dom_name}-config.iso
-	create-config-drive \
-		-h $dom_name \
-		${ssh_key:+-k $ssh_key} \
-		${user_data:+-u $user_data} \
-		${vendor_data:+-v $vendor_data} \
-		$config_image
+  config_image=/tmp/${dom_name}-config.iso
+  create-config-drive \
+    -h "$dom_name" \
+    ${ssh_key:+-k "$ssh_key"} \
+    ${user_data:+-u "$user_data"} \
+    ${vendor_data:+-v "$vendor_data"} \
+    "$config_image"
 fi
 
-virt-install -n $dom_name \
-	--disk vol=$boot_vol,bus=$boot_vol_bus --import \
-  --vcpus $vcpus \
-	--memory $memory \
-	--noautoconsole \
-	${config_image:+--disk path=$config_image,device=cdrom} \
+virt-install -n "$dom_name" \
+  --disk vol="$boot_vol",bus="$boot_vol_bus" --import \
+  --vcpus "$vcpus" \
+  --memory "$memory" \
+  --noautoconsole \
+  ${config_image:+--disk path="$config_image",device=cdrom} \
   --network model=virtio \
-	"$@"
+  "$@"
 
