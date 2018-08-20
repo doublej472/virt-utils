@@ -108,6 +108,6 @@ virt-install -n "$dom_name" \
   --memory "$memory" \
   --noautoconsole \
   ${config_image:+--disk path="$config_image",device=cdrom} \
-  --network model=virtio \
+  --network network=default,model=virtio \
   "$@"
 
