@@ -1,8 +1,10 @@
 #!/bin/sh
 
 boot_vol_bus=virtio
+memory=1024
+vcpus=1
 
-ARGS=$(getopt -o s:b:c:u:v:ik:m: --long ssh-key:,size:,import,bus:,base-image:,config:,user-data:,vendor-data:,memory: -n virt-boot -- "$@")
+ARGS=$(getopt -o s:b:c:u:v:p:ik:m: --long ssh-key:,size:,import,bus:,base-image:,config:,user-data:,vendor-data:,vcpus:,memory: -n virt-boot -- "$@")
 
 if [ $? -ne 0 ]; then
 	echo "usage: $myname --base-image <baseimage> <name>"
@@ -45,6 +47,10 @@ while :; do
 			;;
 		-m|--memory)
 			memory="$2"
+			shift 2
+			;;
+		-p|--vcpus)
+			vcpus="$2"
 			shift 2
 			;;
 		-i|--import)
@@ -98,8 +104,10 @@ fi
 
 virt-install -n $dom_name \
 	--disk vol=$boot_vol,bus=$boot_vol_bus --import \
+  --vcpus $vcpus \
 	--memory $memory \
 	--noautoconsole \
 	${config_image:+--disk path=$config_image,device=cdrom} \
+  --network model=virtio \
 	"$@"
 
